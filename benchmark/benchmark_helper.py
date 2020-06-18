@@ -23,6 +23,7 @@ def run_model(model,
     import torch
     import contexttimer
     import json
+    import time
     model()
     if use_cuda:
         start = torch.cuda.Event(enable_timing=True)
@@ -34,18 +35,18 @@ def run_model(model,
             model()
 
     if not use_cuda:
-        qps = num_iter / t.elapsed
-        time_consume = t.elapsed
+        qps = num_iter / time_consume
+        cuda_consume = 0.
     else:
         end.record()
         torch.cuda.synchronize()
         torch_elapsed = start.elapsed_time(end) / 1e3
         qps = num_iter / torch_elapsed
-        time_consume = torch_elapsed
+        cuda_consume = torch_elapsed
     print(
         json.dumps({
             "QPS": qps,
-            "elapsed": time_consume,
+            "elapsed": cuda_consume,
             "n": num_iter,
             "batch_size": batch_size,
             "seq_len": seq_len,

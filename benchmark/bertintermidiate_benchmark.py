@@ -59,6 +59,16 @@ def benchmark_turbo_transformers(model: str, seq_len: int, batch_size: int,
                                seq_len, "turbo")
 
 
+class MatMulBiasAct:
+    def __init__(self, bert_intermediate):
+        self.weight = bert_intermediate.dense.weight.data.transpose(0, 1).contiguous()
+        self.bias = bert_intermediate.dense.bias.data
+        self.act = bert_intermediate.intermediate_act_fn
+
+    def __call__(self, x):
+        return self.act(x @ self.weight + self.bias)
+
+
 def benchmark_torch(model: str, seq_len: int, batch_size: int, n: int):
     import torch
     import transformers
@@ -82,7 +92,11 @@ def benchmark_torch(model: str, seq_len: int, batch_size: int, n: int):
     cfg = model.config  # type: transformers.BertConfig
     input_ids = torch.randn(batch_size, seq_len, cfg.hidden_size,
                               device=test_device)
+    #pdb.set_trace()
     intermediate = model.encoder.layer[0].intermediate
+    #mm_bias_act = MatMulBiasAct(intermediate)
+    #benchmark_helper.run_model(lambda: mm_bias_act(input_ids), True, n, batch_size,
+    #                           seq_len, "torch")
     benchmark_helper.run_model(lambda: intermediate(input_ids), True, n, batch_size,
                                seq_len, "torch")
 
